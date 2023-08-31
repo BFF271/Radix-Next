@@ -1,6 +1,7 @@
 import { IncomingHttpHeaders } from "http"
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
+import type { User } from "@clerk/nextjs/api"
 import { Webhook, WebhookRequiredHeaders } from "svix"
 
 import { env } from "@/env.mjs"
@@ -8,7 +9,30 @@ import { db } from "@/lib/db"
 
 const webhookSecret = env.CLERK_WEBHOOK_SECRET
 
-export async function POST(request: Request) {
+type UnwantedKeys =
+  | "emailAddresses"
+  | "firstName"
+  | "lastName"
+  | "primaryEmailAddressId"
+  | "primaryPhoneNumberId"
+  | "phoneNumbers"
+interface UserInterface extends Omit<User, UnwantedKeys> {
+  email_addresses: {
+    email_address: string
+    id: string
+  }[]
+  primary_email_address_id: string
+  first_name: string
+  last_name: string
+  image_url: string
+  primary_phone_number_id: string
+  phone_numbers: {
+    phone_number: string
+    id: string
+  }[]
+}
+
+async function handler(request: Request) {
   const payload = await request.json()
   const headersList = headers()
   const heads = {
@@ -24,42 +48,55 @@ export async function POST(request: Request) {
       JSON.stringify(payload),
       heads as IncomingHttpHeaders & WebhookRequiredHeaders
     ) as Event
-  } catch (err) {
-    console.error((err as Error).message)
+  } catch (_) {
     return NextResponse.json({}, { status: 400 })
   }
+  const { id } = evt.data
 
+  // Handle the webhook
   const eventType: EventType = evt.type
   if (eventType === "user.created" || eventType === "user.updated") {
-    const { id, first_name, last_name, email_addresses, image_url } = evt.data
-    console.log({ id })
-    try {
-      await db.user.upsert({
-        where: { clerkId: id as string },
-        create: {
-          clerkId: id as string,
-          name: `${first_name} ${last_name}`,
-          // @ts-ignore
-          email: email_addresses[0].email_address,
-          image: image_url as string,
-        },
-        update: {
-          name: `${first_name} ${last_name}`,
-          image: image_url as string,
-        },
-      })
-      return NextResponse.json({ success: true }, { status: 201 })
-    } catch (error) {
-      console.error(error)
-      return NextResponse.json({ err: `${error}` }, { status: 400 })
+    const {
+      id,
+      first_name,
+      last_name,
+      email_addresses,
+      image_url,
+      primary_email_address_id,
+    } = evt.data
+
+    const emailObject = email_addresses?.find((email) => {
+      return email.id === primary_email_address_id
+    })
+
+    if (!emailObject) {
+      return NextResponse.json({}, { status: 400 })
     }
+    await db.user.upsert({
+      where: { clerkId: id },
+      update: {
+        name: `${first_name || ""} ${last_name || ""}`,
+        email: emailObject.email_address,
+      },
+      create: {
+        clerkId: id,
+        name: `${first_name || ""} ${last_name || ""}`,
+        email: emailObject.email_address,
+      },
+    })
   }
+  console.log(`User ${id} was ${eventType}`)
+  return NextResponse.json({ success: true }, { status: 201 })
 }
 
 type EventType = "user.created" | "user.updated" | "*"
 
 type Event = {
-  data: Record<string, string | number>
+  data: UserInterface
   object: "event"
   type: EventType
 }
+
+export const GET = handler
+export const POST = handler
+export const PUT = handler
