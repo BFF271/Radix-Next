@@ -72,18 +72,23 @@ async function handler(request: Request) {
     if (!emailObject) {
       return NextResponse.json({}, { status: 400 })
     }
-    await db.user.upsert({
-      where: { clerkId: id },
-      update: {
-        name: `${first_name || ""} ${last_name || ""}`,
-        email: emailObject.email_address,
-      },
-      create: {
-        clerkId: id,
-        name: `${first_name || ""} ${last_name || ""}`,
-        email: emailObject.email_address,
-      },
-    })
+
+    await db.$transaction([
+      db.user.upsert({
+        where: { clerkId: id },
+        update: {
+          name: `${first_name || ""} ${last_name || ""}`,
+          email: emailObject.email_address,
+          image: image_url,
+        },
+        create: {
+          clerkId: id,
+          name: `${first_name || ""} ${last_name || ""}`,
+          email: emailObject.email_address,
+          image: image_url,
+        },
+      }),
+    ])
   }
   console.log(`User ${id} was ${eventType}`)
   return NextResponse.json({ success: true }, { status: 201 })

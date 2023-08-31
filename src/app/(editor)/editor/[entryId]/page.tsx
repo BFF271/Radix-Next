@@ -3,7 +3,7 @@ import { JournalEntry, User } from "@prisma/client"
 
 import { getUserByClerkId } from "@/lib/auth"
 import { db } from "@/lib/db"
-import Editor from "@/components/editor"
+import Editor from "@/components/journal/editor"
 
 async function getPostForUser(entryId: JournalEntry["id"], userId: User["id"]) {
   return await db.journalEntry.findFirst({
@@ -22,7 +22,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
   const user = await getUserByClerkId()
 
   if (!user) {
-    redirect("/login")
+    redirect("/sign-in")
   }
 
   const entry = await getPostForUser(params.entryId, user.id)

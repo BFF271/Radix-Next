@@ -3,10 +3,11 @@ import { redirect } from "next/navigation"
 import { getUserByClerkId } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { EmptyPlaceholder } from "@/components/empty-placeholder"
-import { JournalHeader } from "@/components/header"
+import { Header } from "@/components/header"
+import { Icons } from "@/components/icons"
 import { JournalEntryItem } from "@/components/journal/journal-entry"
 import JournalEntryCreateButton from "@/components/journal/journal-entry-create-button"
-import { JournalShell } from "@/components/shell"
+import { Shell } from "@/components/shell"
 
 export const metadata = {
   title: "Journal",
@@ -14,10 +15,6 @@ export const metadata = {
 
 export default async function JournalPage() {
   const user = await getUserByClerkId()
-
-  if (!user) {
-    redirect("/login")
-  }
 
   const entries = await db.journalEntry.findMany({
     where: {
@@ -34,14 +31,17 @@ export default async function JournalPage() {
   })
 
   return (
-    <JournalShell>
-      <JournalHeader
-        heading="Entries"
-        text="Create and manage journal entries."
+    <Shell>
+      <Header
+        title="Entries"
+        description="Create and manage journal entries."
+        size="sm"
+        className="items-center justify-between lg:flex"
       >
         <JournalEntryCreateButton />
-      </JournalHeader>
-      <div>
+      </Header>
+
+      <div className="w-full">
         {entries?.length ? (
           <div className="divide-y divide-border rounded-md border">
             {entries.map((entry) => (
@@ -59,6 +59,6 @@ export default async function JournalPage() {
           </EmptyPlaceholder>
         )}
       </div>
-    </JournalShell>
+    </Shell>
   )
 }
