@@ -1,13 +1,24 @@
-import { ClerkProvider } from "@clerk/nextjs";
+import localFont from "next/font/local"
+import { ClerkProvider } from "@clerk/nextjs"
 
-import "@/styles/globals.css";
+import "@/styles/globals.css"
 
-import { Inter } from "next/font/google";
+import { Inter as FontSans } from "next/font/google"
 
-import { siteConfig } from "@/config/site";
-import { cn } from "@/lib/utils";
+import { siteConfig } from "@/config/site"
+import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/toaster"
+import { Providers } from "@/components/providers"
 
-const inter = Inter({ subsets: ["latin"] });
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
+
+const fontHeading = localFont({
+  src: "../../assets/fonts/CalSans-SemiBold.woff2",
+  variable: "--font-heading",
+})
 
 export const metadata = {
   title: {
@@ -55,20 +66,29 @@ export const metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: `${siteConfig.url}/site.webmanifest`,
-};
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={cn(inter.className, "min-h-screen antialiased")}>
-          {children}
+        <body
+          className={cn(
+            "min-h-screen bg-background font-sans antialiased",
+            fontSans.variable,
+            fontHeading.variable
+          )}
+        >
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </body>
       </html>
     </ClerkProvider>
-  );
+  )
 }
